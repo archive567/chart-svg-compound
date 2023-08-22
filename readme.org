@@ -1,0 +1,130 @@
+
+* chart-svg-compound
+
+[[https://hackage.haskell.org/package/chart-svg-compound][https://img.shields.io/hackage/v/chart-svg-compound.svg]]
+[[https://github.com/tonyday567/chart-svg-compound/actions?query=workflow%3Ahaskell-ci][https://github.com/tonyday567/chart-svg-compound/workflows/haskell-ci/badge.svg]]
+
+~chart-svg-compound~ is a new package.
+
+#+begin_src haskell :results output
+:r
+:set prompt "> "
+:set -Wno-type-defaults
+:set -Wno-name-shadowing
+:set -XOverloadedStrings
+:set -XOverloadedLabels
+:set -Wno-incomplete-uni-patterns
+import Chart.Compound
+import Chart
+import Chart.Examples
+import Prettychart
+import Data.Bifunctor
+putStrLn "ok"
+(display, quit) <- startChartServer
+disp x = display $ x & set (#markupOptions % #markupHeight) 250 & set (#hudOptions % #frames % ix 1 % _2 % #buffer) 0.1
+#+end_src
+
+#+RESULTS:
+: [1 of 1] Compiling Chart.Compound   ( src/Chart/Compound.hs, interpreted ) [Source file changed]
+: Ok, one module loaded.
+: ok
+: Setting phasers to stun... (port 9160) (ctrl-c to quit)
+
+#+begin_src haskell :results output
+disp $ collapseCompound [lineExample, unitExample]
+#+end_src
+
+#+RESULTS:
+: True
+
+#+begin_src haskell :results output
+disp lineExample
+#+end_src
+
+#+RESULTS:
+: True
+
+#+begin_src haskell :results output
+lineExample1 = lineExample & over (#hudOptions % #titles) (take 1) & over (#hudOptions % #legends) (const [])
+disp lineExample1
+#+end_src
+
+#+RESULTS:
+: True
+
+#+begin_src haskell :results output
+line1 = lineExample & over (#hudOptions % #titles) (const [(5,defaultTitle "line1")]) & over (#hudOptions % #legends) (const []) & over (#hudOptions % #axes) (take 1 . fmap (second (set (#ticks % #ltick) Nothing)))
+
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+
+line2 = line1 & set #charts (unnamed (foldOf (#charts % charts') lineExample & fmap (\(LineChart s pss) -> LineChart s (fmap (\ps -> fmap (\(Point x y) -> Point (2+x) (2+y)) ps) pss)))) & over (#hudOptions % #titles) (const [(5,defaultTitle "line2")]) & over (#hudOptions % #legends) (const []) & over (#hudOptions % #axes) (const [])
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+disp $ collapseCompound [line1, line2]
+#+end_src
+
+#+RESULTS:
+: True
+
+collapseCompound deconstruction
+
+#+begin_src haskell :results output
+cs = [line1, line2]
+x1 = addHudCompound (zip (view #hudOptions <$> cs) (view #charts <$> cs))
+:t x1
+#+end_src
+
+#+RESULTS:
+: x1 :: [ChartTree]
+
+#+begin_src haskell :results output
+disp $ mempty & #charts .~ mconcat x1
+#+end_src
+
+#+RESULTS:
+: True
+
+#+begin_src haskell :results output
+(huds1, db1) = toHuds (view #hudOptions line1) (singletonGuard $ view box' (view #charts line1))
+(huds2, db2) = toHuds (view #hudOptions line2) (singletonGuard $ view box' (view #charts line2))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+hss = [huds1,huds2]
+dbs = [db1, db2]
+css = [view #charts line1, view #charts line2]
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+disp $ mempty & #charts .~ mconcat css
+#+end_src
+
+#+RESULTS:
+: True
+
+
+#+begin_src haskell :results output
+c0 = initialCanvas (view #chartAspect (view #hudOptions line1)) (view #charts line1)
+c0
+#+end_src
+
+#+RESULTS:
+: Rect -0.75 0.75 -0.5 0.5
+
+#+begin_src haskell :results output
+:t runHudCompoundWith c0 (zip3 dbs hss css)
+#+end_src
+
+#+RESULTS:
+: runHudCompoundWith c0 (zip3 dbs hss css) :: [ChartTree]
