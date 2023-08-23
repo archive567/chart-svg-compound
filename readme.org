@@ -113,7 +113,6 @@ disp $ mempty & #charts .~ mconcat css
 #+RESULTS:
 : True
 
-
 #+begin_src haskell :results output
 c0 = initialCanvas (view #chartAspect (view #hudOptions line1)) (view #charts line1)
 c0
