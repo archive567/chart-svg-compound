@@ -20,25 +20,34 @@ import Chart.Examples
 import Prettychart
 import Data.Bifunctor
 putStrLn "ok"
-(display, quit) <- startChartServer
+(display, quit) <- startChartServer Nothing
 disp x = display $ x & set (#markupOptions % #markupHeight) 250 & set (#hudOptions % #frames % ix 1 % _2 % #buffer) 0.1
 #+end_src
 
 #+RESULTS:
 : [1 of 1] Compiling Chart.Compound   ( src/Chart/Compound.hs, interpreted ) [Source file changed]
 : Ok, one module loaded.
+: >
 : ok
-: Setting phasers to stun... (port 9160) (ctrl-c to quit)
+: Setting phasers to stun...
+: 9160) (ctrl-c to quit)
 
 #+begin_src haskell :results output
-disp $ collapseCompound [lineExample, unitExample]
+disp $ collapseCompoundCandidate [lineExample, unitExample]
 #+end_src
 
 #+RESULTS:
 : True
 
 #+begin_src haskell :results output
-disp lineExample
+[lineExample, unitExample] & fmap (\co -> toHuds (view #hudOptions co) (singletonGuard $ view box' (view #charts co))) & fmap fst & zipWith (\i hs -> fmap (over #priority (+(Priority (i*0.1)))) hs) [0..] & fmap (fmap (view #priority))
+#+end_src
+
+#+RESULTS:
+: [[Priority {priority = 5.0},Priority {priority = 5.0},Priority {priority = 1.0},Priority {priority = 20.0},Priority {priority = 12.0},Priority {priority = 6.0},Priority {priority = 11.0},Priority {priority = 21.0}],[Priority {priority = 5.1},Priority {priority = 5.1},Priority {priority = 1.1},Priority {priority = 20.1},Priority {priority = 21.1}]]
+
+#+begin_src haskell :results output
+disp $ collapseCompoundCandidate [lineExample, unitExample & set (#hudOptions % #titles) [(20,defaultTitle "unit example")] & over (#hudOptions % #axes) (fmap (second (set #place PlaceTop)))]
 #+end_src
 
 #+RESULTS:
@@ -73,7 +82,7 @@ disp $ collapseCompound [line1, line2]
 #+RESULTS:
 : True
 
-collapseCompound deconstruction
+** ToDo collapseCompound deconstruction
 
 #+begin_src haskell :results output
 cs = [line1, line2]
@@ -127,3 +136,105 @@ c0
 
 #+RESULTS:
 : runHudCompoundWith c0 (zip3 dbs hss css) :: [ChartTree]
+
+
+#+begin_src haskell :results output
+length <$> hss
+#+end_src
+
+#+RESULTS:
+: [5,4]
+
+*** ToDo candidate chart for compounding correctness
+
+#+begin_src haskell :results output
+disp $ mempty & #charts .~ (mconcat $ runHudCompoundWith c0 (zip3 dbs ([mempty] <> (take 1 <$> hss)) css))
+
+#+end_src
+
+#+RESULTS:
+: True
+
+#+begin_src haskell :results output
+r1 = (mempty & #hudOptions % #titles .~ [(10,defaultTitle "rectangle 1")] & #charts .~ named "chart1" [RectChart defaultRectStyle [one]]) :: ChartOptions
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+r2 = (mempty & #hudOptions % #titles .~ [(11,defaultTitle "rectangle 2")] & #hudOptions % #axes .~ [(5,defaultAxisOptions)] & #charts .~ named "chart2" [RectChart (defaultRectStyle & #borderColor %~ over lightness' (*2) & #color %~ over chroma' 1.5) [Rect 0 1 0 1]]) :: ChartOptions
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+disp (r1 <> r2)
+#+end_src
+
+#+RESULTS:
+: True
+
+#+begin_src haskell :results output
+r1' = (mempty & #hudOptions % #titles .~ [(12,defaultTitle "r1 title" & #place .~ PlaceLeft)] & #hudOptions % #axes .~ [(6,defaultAxisOptions & #place .~ PlaceLeft)] & #charts .~ named "r1" [RectChart defaultRectStyle [one]]) :: ChartOptions
+r2' = (mempty & #hudOptions % #titles .~ [(12,defaultTitle "r2 title")] & #hudOptions % #axes .~ [(5,defaultAxisOptions)] & #charts .~ named "r2" [RectChart (defaultRectStyle & #borderColor %~ over lightness' (*0.2) & #color %~ over chroma' (*0.5)) [Rect 0 1 0 1]]) :: ChartOptions
+
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+disp $ collapseCompoundCandidate [r1',r2']
+#+end_src
+
+#+RESULTS:
+: True
+
+
+#+begin_src haskell :results output
+(huds1, db1) = toHuds (view #hudOptions r1') (singletonGuard $ view box' (view #charts r1'))
+(huds2, db2) = toHuds (view #hudOptions r2') (singletonGuard $ view box' (view #charts r2'))
+hss = [huds1,huds2]
+dbs = [db1, db2]
+css = [view #charts r1', view #charts r2']
+c0 = initialCanvas (view #chartAspect (view #hudOptions r1')) (view #charts r1')
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+disp $ (mempty & #charts .~ mconcat (runHudCompoundWithCandidate c0 (zip3 dbs hss css)))
+#+end_src
+
+#+RESULTS:
+: True
+
+#+begin_src haskell :results output
+ts = zip3 dbs hss css
+dbs' = zip [(0 :: Int) ..] $ fmap (\(x, _, _) -> x) ts
+hss' = mconcat $ fmap (\(i, xs) -> fmap (i,) xs) $ zip [(0 :: Int) ..] (fmap (\(_, x, _) -> x) ts)
+css' = zip [(0 :: Int) ..] (fmap (\(_, _, x) -> x) ts)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src haskell :results output
+css'
+#+end_src
+
+#+RESULTS:
+: [(0,ChartTree {tree = Node {rootLabel = (Just "r1",[RectChart (RectStyle {borderSize = 1.0e-2, borderColor = Colour 0.02 0.29 0.48 1.00, color = Colour 0.02 0.73 0.80 0.10}) [Rect -0.5 0.5 -0.5 0.5]]), subForest = []}}),(1,ChartTree {tree = Node {rootLabel = (Just "r2",[RectChart (RectStyle {borderSize = 1.0e-2, borderColor = Colour 0.53 0.77 0.98 1.00, color = Colour -16.48 0.48 2.47 0.10}) [Rect 0.0 1.0 0.0 1.0]]), subForest = []}})]
+
+#+begin_src haskell :results output
+fst <$> (mconcat $ (compoundCloses hss'))
+#+end_src
+
+#+RESULTS:
+: [0,1,1]
+
+
+#+begin_src haskell :results output
+length $ fmap sequence_ $ List.transpose $ closes'' 2 <$> (compoundCloses hss')
+#+end_src
+
+#+RESULTS:
+: 2
