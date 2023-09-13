@@ -1,6 +1,8 @@
 
 * chart-svg-compound
 
+Deprecated: integrated into chart-svg v0.6
+
 [[https://hackage.haskell.org/package/chart-svg-compound][https://img.shields.io/hackage/v/chart-svg-compound.svg]]
 [[https://github.com/tonyday567/chart-svg-compound/actions?query=workflow%3Ahaskell-ci][https://github.com/tonyday567/chart-svg-compound/workflows/haskell-ci/badge.svg]]
 
